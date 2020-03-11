@@ -281,3 +281,21 @@ def load_data(path:PathOrStr, file:PathLikeOrBinaryStream='data_save.pkl', bs:in
     ll = torch.load(source, map_location='cpu') if defaults.device == torch.device('cpu') else torch.load(source)
     return ll.databunch(path=path, bs=bs, val_bs=val_bs, num_workers=num_workers, dl_tfms=dl_tfms, device=device,
                         collate_fn=collate_fn, no_check=no_check, **kwargs)
+
+
+def sanity_check(self):
+    "I want to raise Error when there is something wrong"
+    final_message = "You can deactivate this warning by passing `no_check=True`."
+    if not hasattr(self.train_ds, 'items') or len(self.train_ds.items) == 0 or not hasattr(self.train_dl, 'batch_sampler'): return
+    if len(self.train_dl) == 0:
+        raise  Exception(f"""Your training dataloader is empty, you have only {len(self.train_dl.dataset)} items in your training set.
+                 Your batch size is {self.train_dl.batch_size}, you should lower it.""")
+
+    idx = next(iter(self.train_dl.batch_sampler))
+    samples,fails = [],[]
+    for i in idx:
+        samples.append(self.train_dl.dataset[i])
+    batch = self.collate_fn(samples)
+
+# monkey patch, to change the behavior
+DataBunch.sanity_check = sanity_check
